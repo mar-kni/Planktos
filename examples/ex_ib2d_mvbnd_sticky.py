@@ -28,7 +28,7 @@ import planktos
 import numpy.ma as ma
 
 # Let's begin by loading the same fluid and mesh as used in ex_ib2d_ibmesh.py
-envir = planktos.Environment()
+envir = planktos.Environment(ibmesh_color= 'magenta') #choose color of the ibmesh in plots to be magenta
 envir.read_IB2d_fluid_data('examples/ib2d_jellyfish_data', 1.25e-5  , 1600)
 
 #In the ex_ib2d_ibmesh we read in the vertex data to get an immersed mesh. 
@@ -76,9 +76,10 @@ class permstick(planktos.Swarm):
     
     # To do this, we will override after_move, a method that gets called 
     #   after all the agents have moved.
+
     def after_move(self, dt):
-        swrm.props.loc[swrm.ib_collision, 'stick'] = True
-        self.positions[self.ib_collision] = ma.masked
+        self.props.loc[self.ib_collision_idx >= 0, 'stick'] = True
+        self.positions[self.ib_collision_idx >0] = ma.masked
 
 # Now we create the Swarm similar to ex_ib2d_sticky.py.
 # We will set store_prop_history=True because we want to keep track of agent 
@@ -115,7 +116,7 @@ swrm.props['stick'] = np.full(N, False) # creates a length 100 array of False
 
 for ii in range(42):
     swrm.move(0.025, ib_collisions='sticky')
-    # if np.any(swrm.ib_collision): # uncomment to display whenever something is getting stuck!
+    # if np.any(swrm.ib_collision_idx): # uncomment to display whenever something is getting stuck!
     #     swrm.plot()
     
 swrm.plot_all(movie_filename='mvbnd_sticky.mp4', fps=6, fluid='vort',
