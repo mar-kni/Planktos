@@ -14,7 +14,7 @@ from cycler import cycler
 import pdb
 
 #set domain to be square with periodic boundary conditions
-envir = planktos.environment(Lx=1, Ly=1, x_bndry='periodic', y_bndry='periodic')
+envir = planktos.Environment(Lx=1, Ly=1, x_bndry='periodic', y_bndry='periodic')
 
 #define fluid flow field 
 #start with no flow and then change to a simple flow scenario later
@@ -30,7 +30,7 @@ envir.flow = [X_flow, Y_flow] #flow is a list of ndarrays
 SWARM_SIZE = 10 #N=2
 
 
-class three_zone_torque(planktos.swarm):
+class three_zone_torque(planktos.Swarm):
     def __init__(self, *args, **kwargs):
         super(three_zone_torque, self).__init__(*args, **kwargs)
         ##### Parameter choices #####
@@ -317,7 +317,7 @@ class three_zone_torque(planktos.swarm):
         return updated_states
     
     
-    def get_positions(self, dt, params=None):
+    def apply_agent_model(self, dt, params=None):
         ''' A method that updates the positions of the swarm based on the ODEs.
         
             Parameters
