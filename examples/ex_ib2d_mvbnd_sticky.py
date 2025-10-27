@@ -79,7 +79,7 @@ class permstick(planktos.Swarm):
 
     def after_move(self, dt):
         self.props.loc[self.ib_collision_idx >= 0, 'stick'] = True
-        self.positions[self.ib_collision_idx >0] = ma.masked
+        self.positions[self.ib_collision_idx >=0] = ma.masked #edit this- need to add and commit 
 
 # Now we create the Swarm similar to ex_ib2d_sticky.py.
 # We will set store_prop_history=True because we want to keep track of agent 
