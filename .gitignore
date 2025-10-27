@@ -163,3 +163,17 @@ $RECYCLE.BIN/
 *.sln
 *.user
 .vscode/
+
+
+# Ignore common VTK file extensions
+    *.vtk
+    *.vtu
+    *.vtp
+    *.vti
+    *.vtr
+    *.vts
+    *.pvd
+
+#Ignore comsol files
+    *.mph
+    *.mphbin
