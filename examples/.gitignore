@@ -3,3 +3,13 @@ air_cylinder_slow/
 water_cylinder/
 !vicsek_mesh/*.vertex
 !comsol_data/*.stl
+
+#ignore vtk files
+*.vtk 
+*.vtu
+*.vertex 
+
+#ignore comsol files
+*.mph
+*.mphtxt
+*.mphbin

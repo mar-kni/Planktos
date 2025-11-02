@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from io import StringIO
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 
 #read in csv file
 filename= 'examples/MK-torque/r-o-a-threezone/torque-threezone-dfpositions.csv'
@@ -70,7 +71,7 @@ def dist_origin_to_other_agents(df,Lx=1, Ly=1, x_bndry='periodic', y_bndry='peri
             origin_y = positions[:, n, 1] # y positions of agent n for all time (iter * dt x 1)
         
             x_delta = positions[:, : ,0] - origin_x[:, np.newaxis] # vectorized difference in x positions (iter * dt x N)
-            y_delta = positions[:, : ,0] - origin_y[:, np.newaxis] # vectorized difference in y positions (iter * dt x N)
+            y_delta = positions[:, : ,1] - origin_y[:, np.newaxis] # vectorized difference in y positions (iter * dt x N)
         
             if x_bndry == 'periodic':
                 diffs[:, :, 0] = (x_delta + domain[0]/2) % domain[0] - domain[0]/2
@@ -79,10 +80,10 @@ def dist_origin_to_other_agents(df,Lx=1, Ly=1, x_bndry='periodic', y_bndry='peri
                 diffs[:, :, 0] = x_delta
 
             if y_bndry == 'periodic':
-                diffs[:, :, 0] = (y_delta + domain[1]/2) % domain[1] - domain[1]/2
+                diffs[:, :, 1] = (y_delta + domain[1]/2) % domain[1] - domain[1]/2
 
             else:
-               diffs[:, :, 0] = y_delta
+               diffs[:, :, 1] = y_delta
        
             dist[:, n, :] = np.sqrt(diffs[:, :, 0]**2 + diffs[:, :, 1]**2) #store the distances in a matrix for later use            
         return dist #return a matrix of distances (iter * dt x N)
@@ -100,21 +101,194 @@ for t in range(distances.shape[0]): #loop over time
 print(min_distances.shape) #(n_times, n_agents)
 print(min_distances)
 
-#now for each time, find the mean of the minimum distances across all agents
-mean_min_distances = np.mean(min_distances, axis=1) #n_times
-print(mean_min_distances.shape) #(n_times,)
-#plot the mean minimum distance over time
-plt.figure()
-#scatter plot
-plt.scatter(df_agent_positions['time'].unique(), mean_min_distances, s=2)
-plt.xlabel('Time (sseconds)')
-plt.ylabel('Mean minimum distance to closest agent')
-plt.title('Mean minimum distance to closest agent over time')
-#save the plot
+# Extract time vector (in seconds, not time steps)
+time = np.sort(df_agent_positions['time'].unique())
+
+# --- 1️⃣ Mean minimum distance over time ---
+#have each line be a different color
+plt.figure(figsize=(7, 4))
+plt.plot(time, min_distances, color='tab:blue' , lw=1.8)
+plt.xlabel('Time (seconds)', fontsize=12)
+plt.ylabel('Mean minimum distance', fontsize=12)
+plt.title('Mean Minimum Distance to Closest Agent Over Time', fontsize=13)
+plt.grid(alpha=0.3)
+plt.tight_layout()
 plt.savefig('examples/MK-torque/r-o-a-threezone/mean_min_distance_to_closest_agent.png', dpi=300)
 plt.show()
 
+# choose a colormap and generate colors for each agent
+n_agents= min_distances.shape[1]
+cmap = plt.cm.viridis
+colors = cmap(np.linspace(0, 1, n_agents))
+
+# create figure and axis explicitly
+fig, ax = plt.subplots(figsize=(7, 4))
+
+# plot each agent's minimum distance with its gradient color
+for a in range(n_agents):
+    ax.plot(time, min_distances[:, a], color=colors[a], lw=1.8, alpha=0.8)
+
+ax.set_xlabel('Time (seconds)', fontsize=12)
+ax.set_ylabel('Minimum distance to closest agent', fontsize=12)
+ax.set_title('Minimum Distance to Closest Agent Over Time', fontsize=13)
+ax.grid(alpha=0.3)
+
+# create and attach colorbar to the same axis
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=n_agents-1))
+cbar = fig.colorbar(sm, ax=ax, pad=0.02)
+cbar.set_label('Agent ID', rotation=270, labelpad=15)
+
+fig.tight_layout()
+plt.savefig('examples/MK-torque/r-o-a-threezone/min_distance_each_agent_gradient.png', dpi=300)
+plt.show()
 
 
+# --- 2️⃣ Mean ± std minimum distance ---
+avg_min_dist= np.mean(min_distances, axis=1)
+std_dist_min = np.std(min_distances, axis=1)
+plt.figure(figsize=(7, 4))
+plt.plot(time, avg_min_dist, color='tab:blue', lw=1.8, label='Mean minimum distance')
+plt.fill_between(time, 
+                    avg_min_dist - std_dist_min, 
+                 avg_min_dist + std_dist_min,
+                 color='tab:blue', alpha=0.2, label='±1 std')
+plt.xlabel('Time (seconds)', fontsize=12)
+plt.ylabel('Mean minimum distance', fontsize=12)
+plt.title('Mean ± Std of Minimum Distances to Closest Agent', fontsize=13)
+plt.legend(frameon=False)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.savefig('examples/MK-torque/r-o-a-threezone/mean_min_distance_to_closest_agent_std.png', dpi=300)
+plt.show()
+
+# --- 3️⃣ Histogram of final-time minimum distances ---
+final_min_distances = min_distances[-1, :]
+plt.figure(figsize=(6, 4))
+plt.hist(final_min_distances, bins=20, color='tab:orange', edgecolor='black', alpha=0.8)
+plt.xlabel('Minimum distance (final time step)', fontsize=12)
+plt.ylabel('Number of agents', fontsize=12)
+plt.title('Distribution of Closest-Agent Distances at Final Time Step', fontsize=13)
+plt.grid(alpha=0.3, axis='y')
+plt.tight_layout()
+plt.savefig('examples/MK-torque/r-o-a-threezone/histogram_min_distance_final_timestep.png', dpi=300)
+plt.show()
+
+# --- 4️⃣ Mean & std of all pairwise distances over time ---
+mask = ~np.eye(distances.shape[1], dtype=bool)
+mean_dist = np.mean(distances[:, mask], axis=1)
+std_dist = np.std(distances[:, mask], axis=1)
+
+plt.figure(figsize=(7, 4.5))
+plt.plot(time, mean_dist, color='tab:green', lw=2, label='Mean pairwise distance')
+plt.fill_between(time,
+                 mean_dist - std_dist,
+                 mean_dist + std_dist,
+                 color='tab:green', alpha=0.2, label='±1 std')
+plt.plot(time, avg_min_dist, color='tab:blue', lw=1.8, label='Minimum pairwise distance')
+plt.xlabel('Time (seconds)', fontsize=12)
+plt.ylabel('Distance', fontsize=12)
+plt.title('Mean and Standard Deviation of Pairwise Distances Over Time', fontsize=13)
+plt.legend(frameon=False)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.savefig('examples/MK-torque/r-o-a-threezone/mean_pairwise_distance_std.png', dpi=300)
+plt.show()
+
+# --- 5️⃣ Average distance from an agent to all others over time  ---
+#ie for each agent, at each time, we want the average distance to all other agents
+
+#now for each time (each row) and each agent (each column), find the minimum distance to another agent
+# avg_distances: shape (n_times, n_agents)
+avg_distances = np.zeros((distances.shape[0], distances.shape[1]))
+
+for t in range(distances.shape[0]):
+    for a in range(distances.shape[1]):
+        # exclude self-distance by masking the diagonal
+        mask = np.ones(n_agents, dtype=bool)
+        mask[a] = False
+        avg_distances[t, a] = np.mean(distances[t, a, mask])
+# gradient colormap
+cmap = plt.cm.viridis
+colors = cmap(np.linspace(0, 1, n_agents))
+
+# create figure and axis
+fig, ax = plt.subplots(figsize=(7, 4))
+
+# plot each agent's average distance with gradient color
+for a in range(n_agents):
+    ax.plot(time, avg_distances[:, a], color=colors[a], lw=1.5, alpha=0.8)
+
+ax.set_xlabel('Time (seconds)', fontsize=12)
+ax.set_ylabel('Average distance to all other agents', fontsize=12)
+ax.set_title('Average Distance to All Other Agents Over Time', fontsize=13)
+ax.grid(alpha=0.3)
+
+# optional: create a legend for the first few agents only (if too many agents)
+if n_agents <= 15:
+    ax.legend([f'Agent {i}' for i in range(n_agents)], frameon=False, fontsize=9)
 
 
+fig.tight_layout()
+plt.savefig('examples/MK-torque/r-o-a-threezone/average_distance_to_all_agents_gradient.png', dpi=300)
+plt.show()
+
+
+#min distance distribution over time
+plt.figure(figsize=(8,5))
+plt.hist(min_distances, bins=30, density=True, histtype='stepfilled', alpha=0.7)
+plt.xlabel('Minimum Distance to Closest Agent', fontsize=12)
+plt.ylabel('Density', fontsize=12)
+plt.title('Distribution of Minimum Distances Over Time', fontsize=13)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+
+plt.savefig('examples/MK-torque/r-o-a-threezone/heatmap_min_distance_over_time.png', dpi=300)
+plt.show()
+
+#2️⃣ Pairwise distance matrix snapshot
+#Pick a time (e.g., final timestep), and plot a heatmap of all pairwise distances.
+#Can reveal clusters or isolated agents visually.
+import seaborn as sns
+pairwise_snapshot = distances[-1, :, :].copy()
+np.fill_diagonal(pairwise_snapshot, 0)  # distance to self = 0
+plt.figure(figsize=(6,5))
+plt.imshow(pairwise_snapshot, cmap='viridis', origin='lower')
+plt.colorbar(label='Distance')
+plt.xlabel('Agent ID')
+plt.ylabel('Agent ID')
+plt.title('Pairwise distances at final time step')
+plt.tight_layout()
+plt.savefig('examples/MK-torque/r-o-a-threezone/pairwise_distance_heatmap_final_timestep.png', dpi=300)
+plt.show()
+
+#################################
+#make this a movie over time
+# copy of distances to avoid modifying original
+pairwise_time_series = distances.copy()
+n_times = pairwise_time_series.shape[0]
+
+fig, ax = plt.subplots(figsize=(6,5))
+# optional: set global vmin/vmax for consistent colors
+vmax = np.nanmax(pairwise_time_series[np.isfinite(pairwise_time_series)])
+
+def update(frame):
+    ax.clear()
+    snapshot = pairwise_time_series[frame, :, :].copy()
+    np.fill_diagonal(snapshot, 0)  # distance to self = 0
+    im = ax.imshow(snapshot, cmap='viridis', origin='lower', vmin=0, vmax=vmax, label= 'Distance')
+    ax.set_title(f'Pairwise distances at time step {frame}')
+    ax.set_xlabel('Agent ID')
+    ax.set_ylabel('Agent ID')
+
+    return [im]
+
+anim = FuncAnimation(fig, update, frames=n_times, blit=False)
+
+# save animation as mp4 using ffmpeg
+writer = FFMpegWriter(fps=100, metadata=dict(artist='MK'), bitrate=1800)
+anim.save('examples/MK-torque/r-o-a-threezone/pairwise_distances_movie.mp4', writer=writer)
+
+plt.close(fig)
+
+#########
+#Mean min distance distribution at final time step across multiple simulations
