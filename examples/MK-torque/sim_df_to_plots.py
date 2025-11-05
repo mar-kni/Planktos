@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from io import StringIO
 from matplotlib.animation import FuncAnimation, FFMpegWriter
-
+from matplotlib.colors import ListedColormap, BoundaryNorm #for heat maps
 #read in csv file
 filename= 'examples/MK-torque/r-o-a-threezone/torque-threezone-dfpositions.csv'
 df_agent_positions = pd.read_csv(filename)
@@ -248,11 +248,16 @@ plt.show()
 #2️⃣ Pairwise distance matrix snapshot
 #Pick a time (e.g., final timestep), and plot a heatmap of all pairwise distances.
 #Can reveal clusters or isolated agents visually.
-import seaborn as sns
 pairwise_snapshot = distances[-1, :, :].copy()
+# Create a colormap (e.g., viridis) with more discrete bins
+vmax = np.nanmax(pairwise_snapshot[np.isfinite(pairwise_snapshot)])
+n_colors = 20  # more bins = more subtle differences
+cmap = plt.cm.viridis
+bounds = np.linspace(0, vmax, n_colors + 1)  # define bin edges
+norm = BoundaryNorm(bounds, cmap.N)
 np.fill_diagonal(pairwise_snapshot, 0)  # distance to self = 0
 plt.figure(figsize=(6,5))
-plt.imshow(pairwise_snapshot, cmap='viridis', origin='lower')
+plt.imshow(pairwise_snapshot, cmap=cmap, origin='lower', norm=norm)
 plt.colorbar(label='Distance')
 plt.xlabel('Agent ID')
 plt.ylabel('Agent ID')
@@ -265,26 +270,41 @@ plt.show()
 #make this a movie over time
 # copy of distances to avoid modifying original
 pairwise_time_series = distances.copy()
-n_times = pairwise_time_series.shape[0]
 
+n_times = pairwise_time_series.shape[0]
 fig, ax = plt.subplots(figsize=(6,5))
 # optional: set global vmin/vmax for consistent colors
+# Colormap and normalization
 vmax = np.nanmax(pairwise_time_series[np.isfinite(pairwise_time_series)])
+n_colors = 20
+cmap = plt.cm.viridis
+bounds = np.linspace(0, vmax, n_colors + 1)
+norm = BoundaryNorm(bounds, cmap.N)
 
+# Initial plot (needed to create the colorbar)
+snapshot0 = pairwise_time_series[0]
+im = ax.imshow(snapshot0, cmap=cmap, origin='lower', norm=norm)
+cbar = fig.colorbar(im, ax=ax)
+cbar.set_label("Distance")
+
+# Set axis labels and title once
+ax.set_xlabel("Agent ID")
+ax.set_ylabel("Agent ID")
+title = ax.set_title(f"Pairwise distances at time step 0")
+
+# Update function for animation
 def update(frame):
-    ax.clear()
-    snapshot = pairwise_time_series[frame, :, :].copy()
+    snapshot = pairwise_time_series[frame].copy()
     np.fill_diagonal(snapshot, 0)  # distance to self = 0
-    im = ax.imshow(snapshot, cmap='viridis', origin='lower', vmin=0, vmax=vmax, label= 'Distance')
-    ax.set_title(f'Pairwise distances at time step {frame}')
-    ax.set_xlabel('Agent ID')
-    ax.set_ylabel('Agent ID')
+    im.set_data(snapshot)           # update the image data
+    title.set_text(f"Pairwise distances at time step {frame}")
+    print(frame)
+    return [im, title]
 
-    return [im]
-
+# Create animation
 anim = FuncAnimation(fig, update, frames=n_times, blit=False)
 
-# save animation as mp4 using ffmpeg
+# Save as mp4 using ffmpeg
 writer = FFMpegWriter(fps=100, metadata=dict(artist='MK'), bitrate=1800)
 anim.save('examples/MK-torque/r-o-a-threezone/pairwise_distances_movie.mp4', writer=writer)
 

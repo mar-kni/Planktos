@@ -122,4 +122,3 @@ for ii in range(42):
 swrm.plot_all(movie_filename='mvbnd_sticky.mp4', fps=6, fluid='vort',
               plot_heading=False)
 
-
