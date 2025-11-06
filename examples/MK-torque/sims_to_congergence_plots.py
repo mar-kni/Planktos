@@ -24,14 +24,14 @@ import os #for directory reading
 dir_path="examples/MK-torque/r-o-a-threezone/csv_files"
 
 # you also need to give some parameters used in the simulations
-Lx = 1 # length of the domain in the x direction
-Ly = 1 # length of the domain in the y direction
+Lx = 10 # length of the domain in the x direction
+Ly = 10 # length of the domain in the y direction
 dim= 2 # dimension of the simulation 
 x_bndry= 'periodic' # x boundary condition
 y_bndry= 'periodic' # y boundary condition
 
 
-def dist_origin_to_other_agents(df,Lx=1, Ly=1, x_bndry='periodic', y_bndry='periodic', dim=2):
+def dist_origin_to_other_agents(df,Lx, Ly, x_bndry, y_bndry, dim):
         ''' A private method that calculates the distance between an origin 
         position and all the postions in postions_array, respecting periodic
         boundary conditions when applicable.
