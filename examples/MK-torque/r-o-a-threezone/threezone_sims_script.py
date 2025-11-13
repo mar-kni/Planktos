@@ -23,7 +23,7 @@ IC_pos = np.zeros((SWARM_SIZE,2))
 IC_pos[:,0]= np.random.uniform(0,Lx,SWARM_SIZE) # x-positions of the particles
 IC_pos[:,1]= np.random.uniform(0,Ly,SWARM_SIZE) # y-positions of the particles
 num_sims=10 # number of simulations to run
-num_iter= 6000 # number of iterations per simulation
+num_iter= 10000 # number of iterations per simulation
 dt= 0.01 # time step size
 
 class three_zone_torque(planktos.Swarm):
@@ -385,7 +385,7 @@ def run_simulation(Lx, Ly, x_bndry, y_bndry, SWARM_SIZE, IC_pos, num_iter, dt, n
                 rows.append({"agent": i, "time": t, "x": x, "y": y})
         df_long = pd.DataFrame(rows)
         print(df_long.head())
-        df_long.to_csv(f"examples/MK-torque/r-o-a-threezone/threezone_{SWARM_SIZE}_{sim}.csv",index=False)
+        df_long.to_csv(f"examples/MK-torque/r-o-a-threezone/threezone_{SWARM_SIZE}_{sim}_{num_iter}_{dt}.csv",index=False)
 
 #run the simulation 10 times with different random seeds
 run_simulation(Lx=Lx, Ly=Ly, x_bndry=x_bndry, y_bndry=y_bndry, SWARM_SIZE=SWARM_SIZE, IC_pos=IC_pos, num_iter=num_iter, dt=dt, num_sims=num_sims)

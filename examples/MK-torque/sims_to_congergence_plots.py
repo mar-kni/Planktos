@@ -21,7 +21,7 @@ import os #for directory reading
 # MAKE SURE ALL OF THE CSV FILES ARE IN THE SAME DIRECTORY 
 
 # read in the path to the directory where all the simulation csv files are stored
-dir_path="examples/MK-torque/r-o-a-threezone/csv_files"
+dir_path="examples/MK-torque/r-o-a-threezone/csv_files2"
 
 # you also need to give some parameters used in the simulations
 Lx = 10 # length of the domain in the x direction
@@ -117,7 +117,7 @@ for file in os.listdir(dir_path):
 avg_min_dist_df = pd.DataFrame(avg_min_dist_all_sims).T
 avg_min_dist_df.to_csv('avg_min_dist_all_sims.csv', index= False)
 std_dist_min_df = pd.DataFrame(std_dist_min_all_sims).T
-std_dist_min_df.to_csv('std_dist_min_all_sims.csv', index=False)
+std_dist_min_df.to_csv('examples/MK-torque/r-o-a-threezone/csv_files2_plots/std_dist_min_all_sims.csv', index=False)
 
 # create a plot for each simulation
 for i in range(len(avg_min_dist_all_sims)):
@@ -132,7 +132,7 @@ for i in range(len(avg_min_dist_all_sims)):
     plt.title(f'Simulation {i}')
     plt.legend()
     plt.grid()
-    plt.savefig(f'simulation_{i}_min_distance_plot.png')
+    plt.savefig(f'examples/MK-torque/r-o-a-threezone/csv_files2_plots/simulation_{i}_min_distance_plot.png')
 
 #create a plot which plots the average of all simulations on the same plot 
 plt.figure()
@@ -143,4 +143,4 @@ plt.ylabel('Distance')
 plt.title('Average Minimum Distance to Closest Agent Across Simulations')
 plt.legend()
 plt.grid()
-plt.savefig('all_simulations_min_distance_plot.png')
+plt.savefig('examples/MK-torque/r-o-a-threezone/csv_files2_plots/all_simulations_min_distance_plot.png')
